@@ -31,8 +31,7 @@
 
         <!-- ارتباط با دیتابیس -->
         <dependency>
-            <groupId>org.springframework.boot</artifactId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <groupId>org.springframework.boot</groupId> <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
         <!-- دیتابیس موقت H2 (بدون نیاز به نصب) -->
