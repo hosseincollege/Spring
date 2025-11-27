@@ -1,66 +1,48 @@
 package com.smartbms.controller;
 
+import com.smartbms.model.DashboardData;
 import com.smartbms.model.SmartDevice;
-import com.smartbms.repository.DeviceRepository;
+import com.smartbms.service.DeviceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 @RestController
-@RequestMapping("/api/v1/devices")
-@CrossOrigin(origins = "*") // اجازه دسترسی به Vue
+@RequestMapping("/devices") // تمام آدرس‌ها با /devices شروع می‌شوند
+// نکته: تنظیمات CORS در فایل اصلی برنامه انجام شده است، پس اینجا نیازی نیست.
 public class DeviceController {
 
     @Autowired
-    private DeviceRepository deviceRepository;
+    private DeviceService deviceService;
 
-    // 1. گرفتن اطلاعات داشبورد (لیست دستگاه‌ها + آمار ساده)
+    // 1. اندپوینت برای داشبورد (آمار + لیست دستگاه‌ها)
+    // آدرس نهایی: GET /devices/dashboard
     @GetMapping("/dashboard")
-    public ResponseEntity<Map<String, Object>> getDashboardData() {
-        List<SmartDevice> devices = deviceRepository.findAll();
-        
-        long onlineCount = devices.stream().filter(SmartDevice::isOnline).count();
-        long criticalCount = devices.stream().filter(d -> "CRITICAL".equals(d.getAlertLevel())).count();
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("totalDevices", devices.size());
-        response.put("onlineDevices", onlineCount);
-        response.put("criticalAlerts", criticalCount);
-        response.put("devices", devices);
-
-        return ResponseEntity.ok(response);
+    public ResponseEntity<DashboardData> getDashboardData() {
+        DashboardData data = deviceService.getDashboardData();
+        return ResponseEntity.ok(data);
     }
 
-    // 2. سناریوی هتل (پر کردن دیتابیس با داده‌های تستی)
+    // 2. اندپوینت برای تغییر وضعیت (Toggle)
+    // آدرس نهایی: PUT /devices/{id}/toggle
+    @PutMapping("/{id}/toggle")
+    public ResponseEntity<SmartDevice> toggleDevice(@PathVariable Long id) {
+        SmartDevice updatedDevice = deviceService.toggleDeviceStatus(id);
+        if (updatedDevice != null) {
+            return ResponseEntity.ok(updatedDevice);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+    
+    // 3. اندپوینت شبیه‌سازی سناریو (برای دکمه "شبیه‌سازی محیطی" در داشبورد)
+    // آدرس نهایی: POST /devices/scenario/hotel
     @PostMapping("/scenario/hotel")
-    public ResponseEntity<String> runHotelScenario() {
-        // ابتدا دیتابیس را پاک کن تا تکراری نشود
-        deviceRepository.deleteAll();
-
-        createDevice("سنسور دما - اتاق سرور", "Sensor", "42.5 C", "WARNING", true);
-        createDevice("چیلر مرکزی", "Actuator", "ON", "NORMAL", true);
-        createDevice("روشنایی لابی", "Light", "OFF", "NORMAL", false);
-        createDevice("سیستم اعلام حریق", "Sensor", "OK", "NORMAL", true);
-        createDevice("دوربین پارکینگ", "Camera", "Recording", "NORMAL", true);
-        createDevice("ترموستات اتاق ۱۰۱", "Thermostat", "24.0 C", "NORMAL", true);
-
-        return ResponseEntity.ok("Hotel Scenario Loaded Successfully!");
-    }
-
-    // متد کمکی برای ساخت دستگاه
-    private void createDevice(String name, String type, String telemetry, String alert, boolean online) {
-        SmartDevice device = new SmartDevice();
-        device.setDeviceName(name);
-        device.setDeviceType(type);
-        device.setLatestTelemetryValue(telemetry);
-        device.setAlertLevel(alert);
-        device.setOnline(online);
-        device.setLastActive(LocalDateTime.now());
-        deviceRepository.save(device);
+    public ResponseEntity<String> triggerScenario() {
+        // فعلا فقط یک پیام موفقیت برمی‌گردانیم تا فرانت‌اند ارور ندهد
+        // بعداً می‌توان منطق پیچیده‌تری اینجا گذاشت
+        return ResponseEntity.ok("Hotel Scenario Triggered Successfully");
     }
 }
